@@ -143,16 +143,26 @@
     // FORM SUBMIT DENGAN TEMPLATE PESAN WA (TERMASUK ID)
     document.getElementById('orderForm').onsubmit = function(e) {
         e.preventDefault();
-        const btn = document.getElementById('btnKirim');
-        btn.disabled = true; btn.innerText = "MENGIRIM...";
-
         const payload = {
-            action: "tambahPesanan", wa: userWA, 
+            action: "tambahPesanan", 
+            wa: userWA, 
             nama: document.getElementById('nama').value,
             kategori: document.getElementById('kategori').value,
             spek: document.getElementById('spek').value,
             harga: document.getElementById('hargaDisplay').innerText
         };
+
+        // Langsung buka WA tanpa nunggu ID (ID tetap masuk Sheets, tapi di pesan WA diganti "Sedang Diproses")
+        const textWA = `Halo Admin DCC! 👋%0A%0ASaya telah membuat pesanan baru melalui Portal:%0A%0A👤 *Nama:* ${payload.nama}%0A🖥️ *Kategori:* ${payload.kategori}%0A📝 *Spesifikasi:* ${payload.spek}%0A💰 *Estimasi:* ${payload.harga}%0A%0AMohon segera diproses. Terima kasih! 🙏`;
+        window.open(`https://wa.me/${ADMIN_WA}?text=${textWA}`, '_blank');
+
+        // Proses simpan data di background
+        fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
+        .then(() => {
+            alert("Pesanan Anda sedang didaftarkan ke sistem.");
+            location.reload();
+        });
+    };
 
         fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
         .then(res => res.text())
