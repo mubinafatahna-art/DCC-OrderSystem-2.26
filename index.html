@@ -154,7 +154,7 @@
 
         // Langsung buka WA tanpa nunggu ID (ID tetap masuk Sheets, tapi di pesan WA diganti "Sedang Diproses")
         const textWA = `Halo Admin DCC! 👋%0A%0ASaya telah membuat pesanan baru melalui Portal:%0A%0A👤 *Nama:* ${payload.nama}%0A🖥️ *Kategori:* ${payload.kategori}%0A📝 *Spesifikasi:* ${payload.spek}%0A💰 *Estimasi:* ${payload.harga}%0A%0AMohon segera diproses. Terima kasih! 🙏`;
-        window.open(`https://wa.me/${ADMIN_WA}?text=${textWA}`, '_blank');
+        window.open(`https://wa.me/${ADMIN_WA}?text=${textWA}`, 'const templateWA = `Halo Admin DCC! 👋%0A%0ASaya telah membuat pesanan baru melalui Portal:%0A%0A🆔 *ID PESANAN: ${newID}*%0A👤 *Nama:* ${payload.nama}%0A🖥️ *Kategori:* ${payload.kategori}%0A📝 *Spesifikasi:* ${payload.spek}%0A💰 *Estimasi:* ${payload.harga}%0A%0AMohon segera diproses untuk rancangan PC saya. Terima kasih! 🙏`;');
 
         // Proses simpan data di background
         fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
