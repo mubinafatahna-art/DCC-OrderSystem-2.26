@@ -65,7 +65,7 @@
 </div>
 
 <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwEahdVwnAqbsmjY2fuoM0yRT-_hE2i7Ov-VhQqggo7UrSHMXg037_imBdJKjNClL8/exec"; 
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwftl9m5F5Kq71hLIPfBJRfOtUUghPkNRPYaB_TBU16-r2DjHVjKtj11wQVDSRbRBU/exec"; 
     const ADMIN_WA = "6281944602761";
     let userWA = "";
     let selectedMethod = "TF";
@@ -161,28 +161,70 @@
         event.currentTarget.classList.add('active');
     }
 
-    function bayar(id) {
-        const f = document.getElementById(`f-${id}`).files[0];
-        if(!f && selectedMethod !== 'CASH') return alert("Pilih file bukti!");
+    function aksiBayar(id) {
+        const fileInput = document.getElementById(`f-${id}`);
         const btn = document.getElementById(`bp-${id}`);
-        btn.disabled = true; btn.innerText = "MENYIMPAN...";
+        
+        if(!fileInput.files[0] && selectedMethod !== 'CASH') return alert("Pilih foto bukti transfer!");
+        
+        btn.disabled = true; btn.innerText = "Uploading...";
+
         const reader = new FileReader();
-        if(f) reader.readAsDataURL(f); else reader.onload = () => {};
-        reader.onload = () => {
-            fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: "uploadBukti", idPesanan: id, file: reader.result || "", metode: selectedMethod }) })
-            .then(() => {
-                btn.innerText = "✅ TERSIMPAN";
-                document.getElementById(`bw-${id}`).style.display = 'block';
-            });
-        };
-        if(selectedMethod === 'CASH') reader.onload();
+        if(fileInput.files[0]) {
+            reader.readAsDataURL(fileInput.files[0]);
+            reader.onload = function() {
+                sendPayment(id, reader.result, btn);
+            };
+        } else {
+            sendPayment(id, "", btn); // Untuk metode CASH
+        }
     }
 
-    function setuju(id) {
-        fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: "responRancangan", idPesanan: id, status: "SETUJU" }) })
+    function sendPayment(id, fileData, btn) {
+        fetch(SCRIPT_URL, { 
+            method: 'POST', 
+            body: JSON.stringify({ action: "uploadBukti", idPesanan: id, file: fileData, metode: selectedMethod }) 
+        })
         .then(() => {
-            document.getElementById(`bs-${id}`).innerText = "✅ OK";
-            document.getElementById(`bsw-${id}`).style.display = "block";
+            btn.innerText = "✅ Berhasil";
+            document.getElementById(`bw-${id}`).style.display = "block"; // Munculkan tombol WA
+            alert("Data pembayaran masuk. Silakan klik Konfirmasi WA Admin.");
+        })
+        .catch(() => {
+            alert("Gagal upload. Coba ukuran foto lebih kecil.");
+            btn.disabled = false; btn.innerText = "Coba Lagi";
+        });
+    }
+
+    function aksiSetuju(id) {
+        const btn = document.getElementById(`bs-${id}`);
+        btn.disabled = true; btn.innerText = "Processing...";
+        
+        fetch(SCRIPT_URL, { 
+            method: 'POST', 
+            body: JSON.stringify({ action: "responRancangan", idPesanan: id, status: "SETUJU" }) 
+        })
+        .then(() => {
+            btn.innerText = "✅ Tersimpan";
+            document.getElementById(`bsw-${id}`).style.display = "block"; // Munculkan tombol WA
+            alert("Rancangan disetujui di sistem. Klik tombol konfirmasi WA untuk memberitahu admin.");
+        });
+    }
+
+    function aksiRevisi(id) {
+        const cat = document.getElementById(`ct-${id}`).value;
+        if(!cat) return alert("Wajib isi alasan revisi!");
+        
+        const btn = document.getElementById(`brs-${id}`);
+        btn.disabled = true; btn.innerText = "Saving...";
+
+        fetch(SCRIPT_URL, { 
+            method: 'POST', 
+            body: JSON.stringify({ action: "responRancangan", idPesanan: id, status: "REVISI", catatan: cat }) 
+        })
+        .then(() => {
+            btn.innerText = "✅ Tersimpan";
+            document.getElementById(`brw-${id}`).style.display = "block"; // Munculkan tombol WA
         });
     }
 
@@ -197,12 +239,16 @@
 
     function kirimWA(id, tipe) {
         let msg = "";
-        if(tipe === 'SETUJU') msg = `Halo Admin! 👋 Saya SETUJU dengan rancangan ID: ${id}. Mohon divalidasi.`;
-        if(tipe === 'BAYAR') msg = `Halo Admin! 👋 Saya sudah bayar ID: ${id} via ${selectedMethod}. Bukti sudah di-upload.`;
-        if(tipe === 'REVISI') msg = `Halo Admin! 👋 Saya minta REVISI ID: ${id}. Catatan: ${document.getElementById(`ct-${id}`).value}`;
-        if(tipe === 'AMBIL') msg = `Halo Admin! 👋 PC ID: ${id} sudah selesai. Saya mau konfirmasi pengambilan.`;
+        const catatan = document.getElementById(`ct-${id}`) ? document.getElementById(`ct-${id}`).value : "-";
+        
+        if(tipe === 'SETUJU') msg = `Halo Admin DCC! 👋\n\nSaya *SETUJU* dengan rancangan ID: *${id}*.\nMohon divalidasi agar saya bisa lanjut ke pembayaran.`;
+        else if(tipe === 'REVISI') msg = `Halo Admin DCC! 👋\n\nSaya mengajukan *REVISI* ID: *${id}*.\n📝 Catatan: ${catatan}`;
+        else if(tipe === 'BAYAR') msg = `Halo Admin DCC! 👋\n\nSaya sudah *LUNAS* membayar ID: *${id}* via ${selectedMethod}.\nBukti sudah saya upload di portal. Mohon dicek. ✅`;
+        else if(tipe === 'AMBIL') msg = `Halo Admin! 👋 PC ID: *${id}* sudah selesai.\nSaya konfirmasi untuk pengambilan unit ke workshop. 🙏`;
+        else msg = `Halo Admin! Saya klien ${userWA} ingin bertanya progres ID: ${id}`;
+
         window.open(`https://wa.me/${ADMIN_WA}?text=${encodeURIComponent(msg)}`, '_blank');
-        location.reload();
+        setTimeout(() => { location.reload(); }, 1000);
     }
 
     function hitung() {
