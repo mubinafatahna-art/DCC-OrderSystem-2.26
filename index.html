@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DCC Portal - Final Version</title>
+    <title>DCC Portal - First Version</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         :root { --neon: #00d2ff; --bg: #0f172a; --card: #1e293b; --white: #ffffff; }
@@ -27,7 +27,7 @@
 
 <div id="dashboardArea" class="container" style="display:none;">
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h4 class="text-neon m-0">DCC DASHBOARD</h4>
+        <h4 class="text-neon m-0">DCC PORTAL</h4>
         <button class="btn btn-sm btn-outline-danger" onclick="logout()">Logout</button>
     </div>
 
@@ -45,10 +45,11 @@
                         <option value="Custom" data-hrg="0">Custom Request</option>
                     </select>
                     <div class="p-2 text-center rounded mb-3" style="background:rgba(0,210,255,0.05); border: 1px dashed var(--neon);">
+                        <h4 id="hargaDisplay" class="text-neon m-0">Estimasi Harga</h4>
                         <h4 id="hargaDisplay" class="text-neon m-0">Rp 0</h4>
                     </div>
                     <textarea id="spek" class="form-control mb-3" rows="3" placeholder="Detail spesifikasi tambahan..."></textarea>
-                    <button type="submit" id="btnKirim" class="btn btn-neon w-100 py-3 shadow">KIRIM & CHAT ADMIN</button>
+                    <button type="submit" id="btnKirim" class="btn btn-neon w-100 py-3 shadow">PESAN & CHAT ADMIN</button>
                 </form>
             </div>
         </div>
