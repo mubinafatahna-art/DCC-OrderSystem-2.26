@@ -49,7 +49,7 @@
                         <h4 id="hargaDisplay" class="text-neon m-0">Rp 0</h4>
                     </div>
                     <textarea id="spek" class="form-control mb-3" rows="3" placeholder="Detail spesifikasi tambahan..."></textarea>
-                    <button type="submit" id="btnKirim" class="btn btn-neon w-100 py-3 shadow">PESAN & CHAT ADMIN</button>
+                    <button type="submit" id="btnKirim" class="btn btn-neon w-100 py-3 shadow">KIRIM PESANAN</button>
                 </form>
             </div>
         </div>
@@ -130,8 +130,8 @@
             return `<input type="file" id="file-${id}" class="form-control form-control-sm mb-2">
                     <button onclick="uploadBukti('${id}')" class="btn btn-sm btn-success">UPLOAD BUKTI TRANSFER</button>`;
         }
-        const msgTanya = encodeURIComponent(`Halo Admin DCC! Saya ingin bertanya progres pesanan ID: ${id}`);
-        return `<button onclick="window.open('https://wa.me/${ADMIN_WA}?text=${msgTanya}')" class="btn btn-sm btn-outline-info">💬 TANYA ADMIN</button>`;
+        const msgTanya = encodeURIComponent(`Halo Admin DCC!Halo Admin DCC👋!\n\nSaya sudah membuat pesanan baru dengan ID pesanan:\n🆔 ID: ${newID}\n👤 Nama: ${payload.nama}\n🖥️ Kategori: ${payload.kategori}\n💰 Harga: ${payload.harga}\n\nMohon diproses segera yaa!!. Terima kasih!`) ;
+        return `<button onclick="window.open('https://wa.me/${ADMIN_WA}?text=${msgTanya}')" class="btn btn-sm btn-outline-info">💬 KONFIRMASI PESANAN KE ADMIN</button>`;
     }
 
     document.getElementById('orderForm').onsubmit = function(e) {
