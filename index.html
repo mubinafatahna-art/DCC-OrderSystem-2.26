@@ -170,6 +170,14 @@
     }
 
     function aksiBayar(id) {
+    const MAX_FILE_SIZE = 10 * 1024 * 1024; // 2MB dalam bytes
+
+    if (fileInput.files[0] && fileInput.files[0].size > MAX_FILE_SIZE) {
+        alert("File terlalu besar! Maksimal ukuran adalah 10MB. Silakan kompres foto Anda atau gunakan screenshot saja.");
+        btn.disabled = false;
+        btn.innerText = "1. SIMPAN PEMBAYARAN";
+        return;
+    }
     const fileInput = document.getElementById(`f-${id}`);
     const btn = document.getElementById(`bp-${id}`);
     
