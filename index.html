@@ -91,12 +91,6 @@
         document.getElementById('dashboardArea').style.display='block';
         loadData();
     }
-    
-    function hitung() {
-        const sel = document.getElementById('kategori');
-        const hrg = sel.options[sel.selectedIndex].getAttribute('data-hrg');
-        document.getElementById('hargaDisplay').innerText = hrg == "0" ? "Custom" : "Rp " + Number(hrg).toLocaleString('id-ID');
-    }
 
     function loadData() {
         fetch(`${SCRIPT_URL}?wa=${userWA}`).then(r => r.json()).then(data => {
@@ -107,10 +101,10 @@
                 let card = `<div class="card p-3 mb-3">
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-neon fw-bold">${id}</span>
-                        <span class="status-badge">${status}</span>
+                        <span class="status-badge" id="badge-${id}">${status}</span>
                     </div>
                     <div class="small text-secondary mb-2">${row[5]} - ${row[4]}</div>
-                    <div class="d-grid gap-2">${renderWorkflow(row, id, status, rev)}</div>
+                    <div class="d-grid gap-2" id="workflow-${id}">${renderWorkflow(row, id, status, rev)}</div>
                 </div>`;
                 if(isSelesai) historyHtml += card; else activeHtml += card;
             }
@@ -121,26 +115,75 @@
 
     function renderWorkflow(row, id, status, rev) {
         if(status === "Pesanan Selesai") {
-            const msg = encodeURIComponent(`Halo Admin! 👋 PC saya ID: ${id} sudah selesai. Saya mau konfirmasi untuk pengambilan unit. 🙏`);
             return `<a href="${row[15]}" target="_blank" class="btn btn-sm btn-neon">📂 DOWNLOAD INVOICE</a>
-                    <button onclick="window.open('https://wa.me/${ADMIN_WA}?text=${msg}')" class="btn btn-sm btn-success">📦 KONFIRMASI PENGAMBILAN</button>`;
+                    <button onclick="konfirmasiWA('${id}', 'AMBIL')" class="btn btn-sm btn-success">📦 KONFIRMASI PENGAMBILAN (WA)</button>`;
         }
         if(["Rancangan Tersedia", "Revisi Diajukan", "Rancangan Telah Direvisi"].includes(status)) {
-            let revBtn = rev < 3 ? `<button onclick="document.getElementById('rev-${id}').style.display='block'" class="btn btn-sm btn-warning">REVISI (${rev}/3)</button>` : `<button class="btn btn-sm btn-secondary disabled">LIMIT HABIS</button>`;
+            let revBtn = rev < 3 ? `<button onclick="showRevForm('${id}')" class="btn btn-sm btn-warning">AJUKAN REVISI (${rev}/3)</button>` : `<button class="btn btn-sm btn-secondary disabled">LIMIT REVISI HABIS</button>`;
             return `<a href="${row[10]}" target="_blank" class="btn btn-sm btn-outline-info">📂 BUKA RANCANGAN</a>
-                    <div class="d-flex gap-2"><button onclick="aksi('${id}','SETUJU')" class="btn btn-sm btn-success w-100">SETUJU</button>${revBtn}</div>
-                    <div id="rev-${id}" style="display:none;" class="mt-2 p-2 border rounded border-secondary">
-                        <textarea id="cat-${id}" class="form-control form-control-sm mb-2" placeholder="Catatan revisi..."></textarea>
-                        <button onclick="aksi('${id}','REVISI')" class="btn btn-sm btn-primary w-100">KIRIM REVISI KE ADMIN</button>
+                    <div class="d-flex gap-2"><button onclick="aksiSetuju('${id}')" class="btn btn-sm btn-success w-100">SETUJU</button>${revBtn}</div>
+                    <div id="revform-${id}" style="display:none;" class="mt-2 p-2 border rounded border-secondary">
+                        <textarea id="cat-${id}" class="form-control form-control-sm mb-2" placeholder="Tulis alasan revisi..."></textarea>
+                        <button id="btnSimpan-${id}" onclick="simpanRevisi('${id}')" class="btn btn-sm btn-primary w-100">1. SIMPAN REVISI KE SISTEM</button>
+                        <button id="btnWA-${id}" style="display:none;" onclick="konfirmasiWA('${id}', 'REVISI')" class="btn btn-sm btn-success w-100 mt-2">2. KONFIRMASI KE WA ADMIN</button>
                     </div>`;
         }
         if(status === "Rancangan Disetujui") {
             return `<input type="file" id="file-${id}" class="form-control form-control-sm mb-2">
-                    <button onclick="uploadBukti('${id}')" class="btn btn-sm btn-success">UPLOAD BUKTI TRANSFER</button>`;
+                    <button onclick="uploadBukti('${id}')" class="btn btn-sm btn-success">UPLOAD BUKTI & CHAT ADMIN</button>`;
         }
-        const msgTanya = encodeURIComponent(`Halo Admin DCC! Saya mau tanya update pesanan ID: ${id}`);
-        return `<button onclick="window.open('https://wa.me/${ADMIN_WA}?text=${msgTanya}')" class="btn btn-sm btn-outline-info">💬 TANYA ADMIN</button>`;
+        return `<button onclick="konfirmasiWA('${id}', 'TANYA')" class="btn btn-sm btn-outline-info">💬 HUBUNGI ADMIN (WA)</button>`;
     }
+
+    // FUNGSI BARU: TAMPILKAN FORM
+    function showRevForm(id) {
+        document.getElementById(`revform-${id}`).style.display = 'block';
+    }
+
+    // FUNGSI BARU: LANGKAH 1 (SIMPAN KE SHEET)
+    function simpanRevisi(id) {
+        const cat = document.getElementById(`cat-${id}`).value;
+        if (!cat) return alert("Isi catatan revisi!");
+        
+        const btnSimpan = document.getElementById(`btnSimpan-${id}`);
+        btnSimpan.disabled = true;
+        btnSimpan.innerText = "MENYIMPAN...";
+
+        fetch(SCRIPT_URL, { 
+            method: 'POST', 
+            mode: 'no-cors', 
+            body: JSON.stringify({ action: "responRancangan", idPesanan: id, status: "REVISI", catatan: cat }) 
+        })
+        .then(() => {
+            btnSimpan.classList.replace('btn-primary', 'btn-secondary');
+            btnSimpan.innerText = "✅ TERSIMPAN DI SISTEM";
+            document.getElementById(`btnWA-${id}`).style.display = 'block'; // MUNCULKAN TOMBOL WA
+            document.getElementById(`badge-${id}`).innerText = "Revisi Diajukan";
+            alert("Langkah 1 Berhasil! Sekarang klik tombol hijau untuk memberitahu Admin via WhatsApp.");
+        });
+    }
+
+    // FUNGSI BARU: LANGKAH 2 (CHAT WA)
+    function konfirmasiWA(id, tipe) {
+        let msg = "";
+        const cat = document.getElementById(`cat-${id}`) ? document.getElementById(`cat-${id}`).value : "-";
+
+        if(tipe === 'REVISI') msg = `Halo Admin DCC! 👋\n\nSaya sudah mengajukan REVISI di portal untuk:\n🆔 ID: ${id}\n📝 Catatan: ${cat}\n\nMohon segera diproses ya.`;
+        else if(tipe === 'SETUJU') msg = `Halo Admin DCC! 👋\n\nSaya SETUJU dengan rancangan ID: ${id}. Lanjut proses pembayaran!`;
+        else if(tipe === 'AMBIL') msg = `Halo Admin! 👋 PC saya ID: ${id} sudah selesai. Saya konfirmasi untuk pengambilan unit.`;
+        else msg = `Halo Admin! Saya ingin bertanya progres ID: ${id}`;
+
+        window.open(`https://wa.me/${ADMIN_WA}?text=${encodeURIComponent(msg)}`, '_blank');
+        if(tipe === 'REVISI') location.reload(); 
+    }
+
+    function aksiSetuju(id) {
+        if(!confirm("Setujui rancangan ini?")) return;
+        fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "responRancangan", idPesanan: id, status: "SETUJU" }) })
+        .then(() => konfirmasiWA(id, 'SETUJU'));
+    }
+
+    // (Fungsi hitung, uploadBukti, orderForm.onsubmit tetap sama seperti sebelumnya)
 
     document.getElementById('orderForm').onsubmit = function(e) {
         e.preventDefault();
