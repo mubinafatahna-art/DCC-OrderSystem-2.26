@@ -170,46 +170,93 @@
     }
 
     function aksiBayar(id) {
-        const MAX_FILE_SIZE = 10 * 1024 * 1024; // 2MB dalam bytes
-        if (fileInput.files[0] && fileInput.files[0].size > MAX_FILE_SIZE) {
-            alert("File terlalu besar! Maksimal ukuran adalah 10MB. Silakan kompres foto Anda atau gunakan screenshot saja.");
-            btn.disabled = false;
-            btn.innerText = "1. SIMPAN PEMBAYARAN";
-            return;
-        }
-        const fileInput = document.getElementById(`f-${id}`);
-        const btn = document.getElementById(`bp-${id}`);
-        
-        if(!fileInput.files[0] && selectedMethod !== 'CASH') return alert("Pilih foto bukti transfer!");
-        
-        btn.disabled = true; btn.innerText = "Uploading...";
+    const fileInput = document.getElementById(`f-${id}`);
+    const btn = document.getElementById(`bp-${id}`);
+    const MAX_SIZE_MB = 10; // Batas maksimal 10MB
 
-        const reader = new FileReader();
-        if(fileInput.files[0]) {
-            reader.readAsDataURL(fileInput.files[0]);
-            reader.onload = function() {
-                sendPayment(id, reader.result, btn);
-            };
-        } else {
-            sendPayment(id, "", btn); // Untuk metode CASH
+    if(!fileInput.files[0] && selectedMethod !== 'CASH') return alert("Pilih foto bukti transfer!");
+    
+    // Validasi Ukuran File (Jika ada file)
+    if (fileInput.files[0]) {
+        if (fileInput.files[0].size > MAX_SIZE_MB * 1024 * 1024) {
+            return alert(`File terlalu besar! Maksimal ukuran adalah ${MAX_SIZE_MB}MB.`);
         }
     }
+
+    btn.disabled = true; 
+    btn.innerText = "Processing Foto...";
+
+    if(fileInput.files[0]) {
+        const file = fileInput.files[0];
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = function(event) {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = function() {
+                // TAHAP KOMPRESI: Menghindari bug timeout Apps Script
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                // Batasi resolusi maksimal 1200px agar data tidak korup saat dikirim
+                const MAX_RES = 1200;
+                if (width > height) {
+                    if (width > MAX_RES) {
+                        height *= MAX_RES / width;
+                        width = MAX_RES;
+                    }
+                } else {
+                    if (height > MAX_RES) {
+                        width *= MAX_RES / height;
+                        height = MAX_RES;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Ubah ke format JPEG kualitas 0.8 (tetap jernih tapi ringan)
+                const compressedData = canvas.toDataURL('image/jpeg', 0.8);
+                
+                btn.innerText = "MENGIRIM...";
+                sendPayment(id, compressedData, btn);
+            };
+        };
+        reader.onerror = () => {
+            alert("Gagal membaca file.");
+            btn.disabled = false;
+        };
+    } else {
+        // Jika CASH (Tanpa File)
+        sendPayment(id, "", btn);
+    }
+}
 
     function sendPayment(id, fileData, btn) {
-        fetch(SCRIPT_URL, { 
-            method: 'POST', 
-            body: JSON.stringify({ action: "uploadBukti", idPesanan: id, file: fileData, metode: selectedMethod }) 
-        })
-        .then(() => {
-            btn.innerText = "✅ Berhasil";
-            document.getElementById(`bw-${id}`).style.display = "block"; // Munculkan tombol WA
-            alert("Data pembayaran masuk. Silakan klik Konfirmasi WA Admin.");
-        })
-        .catch(() => {
-            alert("Gagal upload. Coba ukuran foto lebih kecil.");
-            btn.disabled = false; btn.innerText = "Coba Lagi";
-        });
-    }
+    fetch(SCRIPT_URL, { 
+        method: 'POST', 
+        body: JSON.stringify({ 
+            action: "uploadBukti", 
+            idPesanan: id, 
+            file: fileData, 
+            metode: selectedMethod 
+        }) 
+    })
+    .then(response => {
+        btn.innerText = "✅ BERHASIL DISIMPAN";
+        document.getElementById(`bw-${id}`).style.display = "block"; // Munculkan tombol WA
+        alert("Langkah 1 Berhasil! Sekarang klik Konfirmasi WA Admin.");
+    })
+    .catch(err => {
+        console.error(err);
+        alert("Terjadi gangguan koneksi. Coba lagi.");
+        btn.disabled = false;
+        btn.innerText = "1. SIMPAN PEMBAYARAN";
+    });
+}
 
     function aksiSetuju(id) {
         if(!confirm("Apakah Anda yakin menyetujui rancangan ini?")) return;
