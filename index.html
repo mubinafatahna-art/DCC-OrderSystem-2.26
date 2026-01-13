@@ -91,11 +91,6 @@
     }
 
     function loadData() {
-                // Tambahkan pengecekan link bukti di dalam loop loadData
-        const linkBukti = row[11]; // Kolom 12
-        let buktiHtml = (linkBukti && linkBukti !== "-") ? `<a href="${linkBukti}" target="_blank" class="small text-info mt-1">👁️ Lihat Bukti Pembayaran</a>` : "";
-        
-        // Masukkan buktiHtml ke dalam tampilan kartu pesanan Anda
         document.getElementById('loadingStatus').style.display = 'block';
         fetch(`${SCRIPT_URL}?wa=${userWA}`).then(r => r.json()).then(data => {
             document.getElementById('loadingStatus').style.display = 'none';
