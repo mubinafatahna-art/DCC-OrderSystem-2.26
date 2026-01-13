@@ -130,7 +130,7 @@
             return `<input type="file" id="file-${id}" class="form-control form-control-sm mb-2">
                     <button onclick="uploadBukti('${id}')" class="btn btn-sm btn-success">UPLOAD BUKTI TRANSFER</button>`;
         }
-        const msgTanya = encodeURIComponent(`Halo Admin DCC!Halo Admin DCC👋!\n\nSaya sudah membuat pesanan baru dengan ID pesanan:\n🆔 ID: ${newID}\n👤 Nama: ${payload.nama}\n🖥️ Kategori: ${payload.kategori}\n💰 Harga: ${payload.harga}\n\nMohon diproses segera yaa!!. Terima kasih!`) ;
+        const msgTanya = encodeURIComponent(`Halo Admin DCC! Saya sudah melakukan pemesanan dengan ID: ${id} mohon untuk segera diproses yaa.. Terima kasih!`);
         return `<button onclick="window.open('https://wa.me/${ADMIN_WA}?text=${msgTanya}')" class="btn btn-sm btn-outline-info">💬 KONFIRMASI PESANAN KE ADMIN</button>`;
     }
 
