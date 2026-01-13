@@ -142,9 +142,14 @@
             spek: document.getElementById('spek').value || "-",
             harga: document.getElementById('hargaDisplay').innerText
         };
-
+    function renderWorkflow(row, id, status, rev) {
+        // ... (kode atasnya tetap sama)
+    
+        // Bagian paling bawah fungsi renderWorkflow, ganti menjadi ini:
         const templateWA = `Halo Admin DCC! 👋%0A%0ASaya telah membuat pesanan baru melalui Portal:%0A%0A🆔 *ID PESANAN: ${newID}*%0A👤 *Nama:* ${payload.nama}%0A🖥️ *Kategori:* ${payload.kategori}%0A📝 *Spesifikasi:* ${payload.spek}%0A💰 *Estimasi:* ${payload.harga}%0A%0AMohon segera diproses untuk rancangan PC saya. Terima kasih! 🙏`;
-
+        const pesanTanya = encodeURIComponent(`Halo Admin DCC! 👋 Saya ingin bertanya mengenai pesanan saya dengan ID: ${id}`);
+        return `<button onclick="window.open('https://wa.me/${ADMIN_WA}?text=${pesanTanya}', '_blank')" class="btn btn-sm btn-outline-info w-100">💬 TANYA ADMIN</button>`;
+}
         fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
         .then(() => {
             window.open(`https://wa.me/${ADMIN_WA}?text=${templateWA}`, '_blank');
