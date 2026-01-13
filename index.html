@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DCC Portal - vFinal</title>
+    <title>DCC Portal - Advanced</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         :root { --neon: #00d2ff; --bg: #0f172a; --card: #1e293b; --white: #ffffff; }
@@ -13,14 +13,16 @@
         .form-control, .form-select { background: #0f172a !important; border: 1px solid #334155 !important; color: white !important; }
         .btn-neon { background: linear-gradient(45deg, #00d2ff, #3a7bd5); border: none; color: white; font-weight: bold; }
         .status-badge { font-size: 0.75rem; padding: 3px 10px; border-radius: 15px; border: 1px solid var(--neon); color: var(--neon); }
+        .method-card { cursor: pointer; border: 1px solid #334155; transition: 0.3s; }
+        .method-card:hover, .method-card.active { border-color: var(--neon); background: rgba(0,210,255,0.1); }
     </style>
 </head>
 <body class="p-3">
 
 <div id="loginArea" class="container mt-5" style="display:none;">
-    <div class="card p-4 mx-auto" style="max-width: 400px; margin-top: 10vh;">
-        <h3 class="text-center text-neon mb-4">DCC PORTAL</h3>
-        <input type="number" id="waInput" class="form-control mb-3 text-center" placeholder="Nomor WA (Contoh: 62812...)">
+    <div class="card p-4 mx-auto shadow" style="max-width: 400px;">
+        <h3 class="text-center text-neon mb-4">DCC LOGIN</h3>
+        <input type="number" id="waInput" class="form-control mb-3 text-center" placeholder="628xxxxxxxx">
         <button onclick="login()" class="btn btn-neon w-100">MASUK</button>
     </div>
 </div>
@@ -28,15 +30,15 @@
 <div id="dashboardArea" class="container" style="display:none;">
     <div class="d-flex justify-content-between align-items-center mb-4 border-bottom pb-3 border-secondary">
         <h4 class="text-neon m-0">DCC DASHBOARD</h4>
-        <div class="header-actions d-flex gap-2">
-            <button class="btn btn-sm btn-info fw-bold text-white" onclick="hubungiAdminGlobal()">💬 Hubungi Admin</button>
+        <div class="d-flex gap-2">
+            <button class="btn btn-sm btn-info text-white" onclick="hubungiAdminGlobal()">💬 Hubungi Admin</button>
             <button class="btn btn-sm btn-outline-danger" onclick="logout()">Logout</button>
         </div>
     </div>
 
     <div class="row">
         <div class="col-md-5">
-            <div class="card p-4">
+            <div class="card p-4" id="formOrderWrapper">
                 <h5 class="text-neon mb-3">BUAT PESANAN</h5>
                 <form id="orderForm">
                     <input type="text" id="nama" class="form-control mb-3" placeholder="Nama Lengkap" required>
@@ -50,21 +52,19 @@
                     <div class="p-2 text-center rounded mb-3" style="background:rgba(0,210,255,0.05); border: 1px dashed var(--neon);">
                         <h4 id="hargaDisplay" class="text-neon m-0">Rp 0</h4>
                     </div>
-                    <textarea id="spek" class="form-control mb-3" rows="3" placeholder="Spesifikasi tambahan..."></textarea>
-                    <button type="submit" id="btnKirim" class="btn btn-neon w-100 py-3">KIRIM PESANAN</button>
+                    <textarea id="spek" class="form-control mb-3" rows="3" placeholder="Detail spesifikasi..."></textarea>
+                    <button type="submit" id="btnKirim" class="btn btn-neon w-100">KIRIM PESANAN</button>
                 </form>
             </div>
         </div>
         <div class="col-md-7">
-            <div id="activeOrders"></div>
-            <hr style="border-color:#334155">
-            <div id="historyOrders"></div>
+            <div id="ordersList"></div>
         </div>
     </div>
 </div>
 
 <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz4xI7yLQKi8LhZ82kZVnSb1Q_kq4GoRNkIzna0Z5istiFmFd-DQb9pzK76-0ytsP8/exec"; 
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby1aLJjr1ThqUPNhtw7EtjqQ19r2CdkvV1jCCQ-qse5zE3xQCNfTtYdn-HYJG-qnJA/exec"; 
     const ADMIN_WA = "6281944602761";
     let userWA = "";
 
@@ -80,11 +80,7 @@
         openDashboard();
     }
     function logout() { localStorage.removeItem('dcc_wa'); location.reload(); }
-    
-    function hubungiAdminGlobal() {
-        const msg = encodeURIComponent(`Halo Admin DCC! 👋 Saya klien dengan nomor ${userWA}. Saya ingin bertanya mengenai proses pemesanan saya.`);
-        window.open(`https://wa.me/${ADMIN_WA}?text=${msg}`, '_blank');
-    }
+    function hubungiAdminGlobal() { window.open(`https://wa.me/${ADMIN_WA}?text=Halo Admin DCC! Saya klien nomor ${userWA}, ingin bertanya.`); }
 
     function openDashboard() {
         document.getElementById('loginArea').style.display='none';
@@ -94,147 +90,136 @@
 
     function loadData() {
         fetch(`${SCRIPT_URL}?wa=${userWA}`).then(r => r.json()).then(data => {
-            let activeHtml = ""; let historyHtml = "";
+            let html = "";
             for(let i=data.length-1; i>=1; i--) {
                 const row = data[i];
-                const id = row[2], status = row[9], rev = parseInt(row[17] || 0), isSelesai = row[16] === "SELESAI";
-                let card = `<div class="card p-3 mb-3">
+                html += `<div class="card p-3 mb-3">
                     <div class="d-flex justify-content-between mb-2">
-                        <span class="text-neon fw-bold">${id}</span>
-                        <span class="status-badge" id="badge-${id}">${status}</span>
+                        <span class="text-neon fw-bold">${row[2]}</span>
+                        <span class="status-badge">${row[9]}</span>
                     </div>
-                    <div class="small text-secondary mb-2">${row[5]} - ${row[4]}</div>
-                    <div class="d-grid gap-2" id="workflow-${id}">${renderWorkflow(row, id, status, rev)}</div>
+                    <div class="d-grid gap-2" id="box-${row[2]}">${renderWorkflow(row)}</div>
                 </div>`;
-                if(isSelesai) historyHtml += card; else activeHtml += card;
             }
-            document.getElementById('activeOrders').innerHTML = activeHtml || "Belum ada pesanan aktif.";
-            document.getElementById('historyOrders').innerHTML = historyHtml;
+            document.getElementById('ordersList').innerHTML = html || "Belum ada pesanan.";
         });
     }
 
-    function renderWorkflow(row, id, status, rev) {
-        if(status === "Pesanan Selesai") {
-            return `<a href="${row[15]}" target="_blank" class="btn btn-sm btn-neon">📂 DOWNLOAD INVOICE</a>
-                    <button onclick="konfirmasiWA('${id}', 'AMBIL')" class="btn btn-sm btn-success">📦 KONFIRMASI PENGAMBILAN (WA)</button>`;
+    function renderWorkflow(row) {
+        const id = row[2], status = row[9], hrg = row[7], rev = parseInt(row[17] || 0);
+
+        if (status === "Pesanan Selesai") {
+            return `<button onclick="kirimWA('${id}', 'AMBIL')" class="btn btn-sm btn-success">📦 KONFIRMASI PENGAMBILAN (WA)</button>`;
         }
-        if(["Rancangan Tersedia", "Revisi Diajukan", "Rancangan Telah Direvisi"].includes(status)) {
-            let revBtn = rev < 3 ? `<button onclick="showRevForm('${id}')" class="btn btn-sm btn-warning">AJUKAN REVISI (${rev}/3)</button>` : `<button class="btn btn-sm btn-secondary disabled">LIMIT REVISI HABIS</button>`;
+        if (status === "Invoice Tersedia") {
+            return `<a href="${row[15]}" target="_blank" class="btn btn-sm btn-neon">📂 DOWNLOAD INVOICE</a>`;
+        }
+        if (status === "Menunggu Pembayaran") {
+            return `<div class="p-2 bg-dark rounded border border-info mb-2 small text-info">Silakan pilih metode pembayaran di bawah dan unggah bukti transfer.</div>
+                    <div class="row g-2 mb-2">
+                        <div class="col-4"><div class="card p-2 text-center method-card active" onclick="setMethod('${id}','TF')">BANK TF</div></div>
+                        <div class="col-4"><div class="card p-2 text-center method-card" onclick="setMethod('${id}','QRIS')">QRIS</div></div>
+                        <div class="col-4"><div class="card p-2 text-center method-card" onclick="setMethod('${id}','CASH')">CASH</div></div>
+                    </div>
+                    <div id="qris-box-${id}" style="display:none;" class="text-center mb-2">
+                        <img src="https://via.placeholder.com/150?text=QRIS+DCC" class="img-fluid rounded border border-neon" style="max-width:150px;">
+                    </div>
+                    <div id="tf-box-${id}" class="small mb-2 p-2 bg-secondary rounded">Bank BCA: 123456789 a/n DCC</div>
+                    <input type="file" id="file-${id}" class="form-control form-control-sm mb-2">
+                    <button id="btnPay-${id}" onclick="bayar('${id}')" class="btn btn-sm btn-success w-100">1. SIMPAN PEMBAYARAN</button>
+                    <button id="btnWA-${id}" style="display:none;" onclick="kirimWA('${id}', 'BAYAR')" class="btn btn-sm btn-info w-100 mt-2">2. KONFIRMASI WA ADMIN</button>`;
+        }
+        if (["Rancangan Tersedia", "Revisi Diajukan", "Rancangan Telah Direvisi"].includes(status)) {
             return `<a href="${row[10]}" target="_blank" class="btn btn-sm btn-outline-info">📂 BUKA RANCANGAN</a>
-                    <div class="d-flex gap-2"><button onclick="aksiSetuju('${id}')" class="btn btn-sm btn-success w-100">SETUJU</button>${revBtn}</div>
-                    <div id="revform-${id}" style="display:none;" class="mt-2 p-2 border rounded border-secondary">
-                        <textarea id="cat-${id}" class="form-control form-control-sm mb-2" placeholder="Tulis alasan revisi..."></textarea>
-                        <button id="btnSimpan-${id}" onclick="simpanRevisi('${id}')" class="btn btn-sm btn-primary w-100">1. SIMPAN REVISI KE SISTEM</button>
-                        <button id="btnWA-${id}" style="display:none;" onclick="konfirmasiWA('${id}', 'REVISI')" class="btn btn-sm btn-success w-100 mt-2">2. KONFIRMASI KE WA ADMIN</button>
+                    <div class="d-flex gap-2">
+                        <button id="btnSetuju-${id}" onclick="setuju('${id}')" class="btn btn-sm btn-success w-100">SETUJU</button>
+                        <button onclick="showRev('${id}')" class="btn btn-sm btn-warning w-100">REVISI</button>
+                    </div>
+                    <button id="btnSetujuWA-${id}" style="display:none;" onclick="kirimWA('${id}', 'SETUJU')" class="btn btn-sm btn-info w-100 mt-2">KONFIRMASI WA ADMIN</button>
+                    <div id="rev-${id}" style="display:none;" class="mt-2 border-top pt-2">
+                        <textarea id="cat-${id}" class="form-control form-control-sm mb-2" placeholder="Catatan..."></textarea>
+                        <button id="btnRS-${id}" onclick="simpanRev('${id}')" class="btn btn-sm btn-primary w-100">1. SIMPAN REVISI</button>
+                        <button id="btnRW-${id}" style="display:none;" onclick="kirimWA('${id}', 'REVISI')" class="btn btn-sm btn-success w-100 mt-2">2. CHAT WA ADMIN</button>
                     </div>`;
         }
-        if(status === "Rancangan Disetujui") {
-            return `<input type="file" id="file-${id}" class="form-control form-control-sm mb-2">
-                    <button onclick="uploadBukti('${id}')" class="btn btn-sm btn-success">UPLOAD BUKTI & CHAT ADMIN</button>`;
-        }
-        return `<button onclick="konfirmasiWA('${id}', 'TANYA')" class="btn btn-sm btn-outline-info">💬 HUBUNGI ADMIN (WA)</button>`;
+        return `<button onclick="kirimWA('${id}', 'TANYA')" class="btn btn-sm btn-outline-secondary">💬 HUBUNGI ADMIN</button>`;
     }
 
-    // FUNGSI BARU: TAMPILKAN FORM
-    function showRevForm(id) {
-        document.getElementById(`revform-${id}`).style.display = 'block';
+    // LOGIKA PEMBAYARAN
+    let selectedMethod = "TF";
+    function setMethod(id, m) {
+        selectedMethod = m;
+        document.querySelectorAll('.method-card').forEach(el => el.classList.remove('active'));
+        event.currentTarget.classList.add('active');
+        document.getElementById(`qris-box-${id}`).style.display = m === 'QRIS' ? 'block' : 'none';
+        document.getElementById(`tf-box-${id}`).style.display = m === 'TF' ? 'block' : 'none';
     }
 
-    // FUNGSI BARU: LANGKAH 1 (SIMPAN KE SHEET)
-    function simpanRevisi(id) {
-        const cat = document.getElementById(`cat-${id}`).value;
-        if (!cat) return alert("Isi catatan revisi!");
+    function bayar(id) {
+        const file = document.getElementById(`file-${id}`).files[0];
+        if(!file && selectedMethod !== 'CASH') return alert("Pilih file bukti!");
+        const btn = document.getElementById(`btnPay-${id}`);
+        btn.disabled = true; btn.innerText = "UPLOADING...";
+
+        const reader = new FileReader();
+        if(file) reader.readAsDataURL(file); else reader.onload = () => {}; // dummy for cash
         
-        const btnSimpan = document.getElementById(`btnSimpan-${id}`);
-        btnSimpan.disabled = true;
-        btnSimpan.innerText = "MENYIMPAN...";
+        reader.onload = () => {
+            fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: "uploadBukti", idPesanan: id, file: reader.result, metode: selectedMethod }) })
+            .then(() => {
+                btn.innerText = "✅ DATA TERSIMPAN";
+                document.getElementById(`btnWA-${id}`).style.display = 'block';
+                alert("Langkah 1 Selesai! Klik Tombol Konfirmasi WA.");
+            });
+        };
+        if(selectedMethod === 'CASH') reader.onload();
+    }
 
-        fetch(SCRIPT_URL, { 
-            method: 'POST', 
-            mode: 'no-cors', 
-            body: JSON.stringify({ action: "responRancangan", idPesanan: id, status: "REVISI", catatan: cat }) 
-        })
+    function setuju(id) {
+        fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: "responRancangan", idPesanan: id, status: "SETUJU" }) })
         .then(() => {
-            btnSimpan.classList.replace('btn-primary', 'btn-secondary');
-            btnSimpan.innerText = "✅ TERSIMPAN DI SISTEM";
-            document.getElementById(`btnWA-${id}`).style.display = 'block'; // MUNCULKAN TOMBOL WA
-            document.getElementById(`badge-${id}`).innerText = "Revisi Diajukan";
-            alert("Langkah 1 Berhasil! Sekarang klik tombol hijau untuk memberitahu Admin via WhatsApp.");
+            document.getElementById(`btnSetuju-${id}`).innerText = "✅ DISETUJUI SISTEM";
+            document.getElementById(`btnSetujuWA-${id}`).style.display = "block";
         });
     }
 
-    // FUNGSI BARU: LANGKAH 2 (CHAT WA)
-    function konfirmasiWA(id, tipe) {
+    function simpanRev(id) {
+        const cat = document.getElementById(`cat-${id}`).value;
+        fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: "responRancangan", idPesanan: id, status: "REVISI", catatan: cat }) })
+        .then(() => {
+            document.getElementById(`btnRS-${id}`).innerText = "✅ TERSIMPAN";
+            document.getElementById(`btnRW-${id}`).style.display = "block";
+        });
+    }
+
+    function kirimWA(id, tipe) {
         let msg = "";
-        const cat = document.getElementById(`cat-${id}`) ? document.getElementById(`cat-${id}`).value : "-";
-
-        if(tipe === 'REVISI') msg = `Halo Admin DCC! 👋\n\nSaya sudah mengajukan REVISI di portal untuk:\n🆔 ID: ${id}\n📝 Catatan: ${cat}\n\nMohon segera diproses ya.`;
-        else if(tipe === 'SETUJU') msg = `Halo Admin DCC! 👋\n\nSaya SETUJU dengan rancangan ID: ${id}. Lanjut proses pembayaran!`;
-        else if(tipe === 'AMBIL') msg = `Halo Admin! 👋 PC saya ID: ${id} sudah selesai. Saya konfirmasi untuk pengambilan unit.`;
-        else msg = `Halo Admin! Saya ingin bertanya progres ID: ${id}`;
-
+        if(tipe === 'SETUJU') msg = `Halo Admin! 👋 Saya SETUJU dengan rancangan ID: ${id}. Mohon update status ke Menunggu Pembayaran.`;
+        if(tipe === 'BAYAR') msg = `Halo Admin! 👋 Saya sudah menyelesaikan pembayaran ID: ${id} via ${selectedMethod}. Bukti sudah diunggah di portal.`;
+        if(tipe === 'REVISI') msg = `Halo Admin! 👋 Saya mengajukan REVISI ID: ${id}. Catatan: ${document.getElementById(`cat-${id}`).value}`;
+        if(tipe === 'AMBIL') msg = `Halo Admin! 👋 PC saya ID: ${id} sudah selesai. Saya konfirmasi untuk pengambilan unit. 🙏`;
+        
         window.open(`https://wa.me/${ADMIN_WA}?text=${encodeURIComponent(msg)}`, '_blank');
-        if(tipe === 'REVISI') location.reload(); 
+        location.reload();
     }
 
-    function aksiSetuju(id) {
-        if(!confirm("Setujui rancangan ini?")) return;
-        fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "responRancangan", idPesanan: id, status: "SETUJU" }) })
-        .then(() => konfirmasiWA(id, 'SETUJU'));
+    function showRev(id) { document.getElementById(`rev-${id}`).style.display = 'block'; }
+    function hitung() {
+        const sel = document.getElementById('kategori');
+        const hrg = sel.options[sel.selectedIndex].getAttribute('data-hrg');
+        document.getElementById('hargaDisplay').innerText = hrg == "0" ? "Custom" : "Rp " + Number(hrg).toLocaleString('id-ID');
     }
-
-    // (Fungsi hitung, uploadBukti, orderForm.onsubmit tetap sama seperti sebelumnya)
 
     document.getElementById('orderForm').onsubmit = function(e) {
         e.preventDefault();
-        const btn = document.getElementById('btnKirim');
-        btn.disabled = true; btn.innerText = "MENGIRIM...";
-        const newID = "DCC-" + Math.floor(1000 + Math.random() * 9000);
-        const payload = {
-            action: "tambahPesanan", id: newID, wa: userWA, 
-            nama: document.getElementById('nama').value,
-            kategori: document.getElementById('kategori').value,
-            spek: document.getElementById('spek').value || "-",
-            harga: document.getElementById('hargaDisplay').innerText
-        };
-        const templateWA = encodeURIComponent(`Halo Admin DCC! 👋\n\nSaya buat pesanan baru:\n🆔 ID: ${newID}\n👤 Nama: ${payload.nama}\n🖥️ Kategori: ${payload.kategori}\n💰 Estimasi: ${payload.harga}`);
+        const id = "DCC-" + Math.floor(1000 + Math.random() * 9000);
+        const payload = { action: "tambahPesanan", id: id, wa: userWA, nama: document.getElementById('nama').value, kategori: document.getElementById('kategori').value, spek: document.getElementById('spek').value, harga: document.getElementById('hargaDisplay').innerText };
         fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
         .then(() => {
-            window.open(`https://wa.me/${ADMIN_WA}?text=${templateWA}`, '_blank');
+            window.open(`https://wa.me/${ADMIN_WA}?text=${encodeURIComponent("Pesanan Baru ID: " + id)}`, '_blank');
             location.reload();
         });
     };
-
-    function aksi(id, tipe) {
-        const catInput = document.getElementById(`cat-${id}`);
-        const cat = catInput ? catInput.value : "";
-        if (tipe === "REVISI" && !cat) return alert("Isi catatan revisi!");
-        
-        let pesanWA = tipe === "REVISI" 
-            ? `Halo Admin DCC! 👋\n\nSaya ingin mengajukan *REVISI RANCANGAN* untuk:\n🆔 ID: ${id}\n📝 Catatan: ${cat}`
-            : `Halo Admin DCC! Saya *SETUJU* dengan rancangan ID: ${id}. Lanjut ke proses pembayaran.`;
-
-        fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "responRancangan", idPesanan: id, status: tipe, catatan: cat }) })
-        .then(() => { 
-            window.open(`https://wa.me/${ADMIN_WA}?text=${encodeURIComponent(pesanWA)}`, '_blank');
-            location.reload(); 
-        });
-    }
-
-    function uploadBukti(id) {
-        const file = document.getElementById(`file-${id}`).files[0];
-        if(!file) return alert("Pilih file!");
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => {
-            fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ action: "uploadBukti", idPesanan: id, file: reader.result }) })
-            .then(() => {
-                const msg = encodeURIComponent(`Halo Admin! Saya sudah UPLOAD BUKTI BAYAR untuk ID: ${id}. Mohon divalidasi. ✅`);
-                window.open(`https://wa.me/${ADMIN_WA}?text=${msg}`, '_blank');
-                location.reload();
-            });
-        };
-    }
 </script>
 </body>
 </html>
