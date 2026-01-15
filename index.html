@@ -63,8 +63,9 @@
         </div>
     </div>
 </div>
-
+    
 <script>
+    let selectedMethod = "TF";
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby21ItKzFQlvfWlhzPc0G4eZOlOtg79icqJfT-e-d9MIvYJDj28U9_FbLmKT8tH1_M/exec"; 
     const ADMIN_WA = "6281944602761";
     let userWA = "";
@@ -161,13 +162,18 @@
         return `<button onclick="kirimWA('${id}', 'TANYA')" class="btn btn-sm btn-outline-secondary">💬 HUBUNGI ADMIN</button>`;
     }
 
-    function setM(id, m) {
-        selectedMethod = m;
-        document.getElementById(`qbox-${id}`).style.display = m === 'QRIS' ? 'block' : 'none';
-        document.getElementById(`tbox-${id}`).style.display = m === 'TF' ? 'block' : 'none';
-        document.querySelectorAll('.method-card').forEach(el => el.classList.remove('active'));
-        event.currentTarget.classList.add('active');
-    }
+   function setM(id, m) {
+    selectedMethod = m; // Update variabel global
+    console.log("Metode dipilih:", selectedMethod); // Untuk cek di console
+    
+    // Update tampilan UI
+    document.getElementById(`qbox-${id}`).style.display = m === 'QRIS' ? 'block' : 'none';
+    document.getElementById(`tbox-${id}`).style.display = m === 'TF' ? 'block' : 'none';
+    
+    // Reset dan aktifkan class CSS
+    document.querySelectorAll('.method-card').forEach(el => el.classList.remove('active'));
+    event.currentTarget.classList.add('active');
+}
 
     function aksiBayar(id) {
     const fileInput = document.getElementById(`f-${id}`);
@@ -236,24 +242,23 @@
 }
 
    function sendPayment(id, fileData, btn) {
+    // Kirim data dengan metode yang sudah terpilih di variabel selectedMethod
     fetch(SCRIPT_URL, { 
         method: 'POST', 
-        mode: 'no-cors', // BYPASS ERROR KONEKSI
-        cache: 'no-cache',
-        headers: { 'Content-Type': 'application/json' },
+        mode: 'no-cors', 
         body: JSON.stringify({ 
             action: "uploadBukti", 
             idPesanan: id, 
             file: fileData, 
-            metode: selectedMethod 
+            metode: selectedMethod // Ini akan mengirim TF, QRIS, atau CASH
         }) 
     })
     .then(() => {
-        // Karena mode no-cors, kita langsung anggap sukses
-        btn.innerText = "✅ BERHASIL DISIMPAN";
+        btn.innerText = "✅ TERSIMPAN";
         document.getElementById(`bw-${id}`).style.display = "block";
-        alert("Langkah 1 Berhasil! Sekarang klik Konfirmasi WA Admin.");
-    })
+        alert(`Berhasil! Pembayaran via ${selectedMethod} telah dicatat.`);
+    });
+}
     .catch(err => {
         console.error(err);
         alert("Terjadi kesalahan teknis. Namun cek apakah tombol WA sudah muncul.");
